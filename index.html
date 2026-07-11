@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Scout Volley</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0E141B;
+  --bg-elevated:#161E27;
+  --bg-card:#1B2530;
+  --border:#28323F;
+  --text:#EDEEF2;
+  --text-muted:#8C95A3;
+  --noi:#3E8FE0;
+  --noi-dim:#1E3A54;
+  --loro:#E35B45;
+  --loro-dim:#4A2620;
+  --gold:#E8A33D;
+  --gold-dim:#4A3A1E;
+  --green:#4CAF7D;
+  --radius:14px;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none;}
+html,body{height:100%;}
+body{
+  margin:0; background:var(--bg); color:var(--text);
+  font-family:'Inter',system-ui,sans-serif;
+  overscroll-behavior:none;
+}
+h1,h2,h3,.num{font-family:'Barlow Condensed',sans-serif; font-weight:700; letter-spacing:.01em;}
+button{font-family:inherit; cursor:pointer; -webkit-appearance:none; border:none; outline:none;}
+input{font-family:inherit;}
+.hidden{display:none !important;}
+.screen{min-height:100vh; display:flex; flex-direction:column;}
+
+/* ---------- SETUP ---------- */
+#screen-setup{align-items:center; justify-content:center; padding:24px;}
+.setup-card{
+  background:var(--bg-elevated); border:1px solid var(--border); border-radius:20px;
+  padding:32px; width:100%; max-width:480px;
+}
+.brand{display:flex; align-items:baseline; gap:10px; margin-bottom:4px;}
+.brand .ball{width:14px; height:14px; border-radius:50%; background:var(--gold); display:inline-block;}
+.brand h1{font-size:34px; margin:0; line-height:1;}
+.subtitle{color:var(--text-muted); font-size:14px; margin:0 0 26px 0;}
+label{display:block; font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-muted); margin:18px 0 8px;}
+input[type=text],input[type=number]{
+  width:100%; background:var(--bg-card); border:1px solid var(--border); color:var(--text);
+  padding:14px 16px; border-radius:10px; font-size:17px;
+}
+.btn{
+  padding:14px 20px; border-radius:10px; font-size:16px; font-weight:600; color:var(--text);
+  background:var(--bg-card); border:1px solid var(--border); transition:transform .06s;
+}
+.btn:active{transform:scale(.97);}
+.btn-primary{background:var(--gold); color:#1a1305; border-color:var(--gold);}
+.btn-noi{background:var(--noi); color:#fff;}
+.btn-loro{background:var(--loro); color:#fff;}
+.btn-block{width:100%; display:block; margin-top:22px;}
+.match-list{display:flex; flex-direction:column; gap:8px; max-height:180px; overflow-y:auto; margin-top:8px;}
+.match-item{padding:12px 14px; background:var(--bg-card); border:1px solid var(--border); border-radius:10px; display:flex; justify-content:space-between; align-items:center;}
+.match-item span{font-weight:600;}
+.small-link{color:var(--text-muted); font-size:12px; text-decoration:underline; margin-top:14px; display:inline-block;}
+
+/* ---------- MAIN ---------- */
+#screen-main{display:none;}
+.topbar{
+  background:var(--bg-elevated); border-bottom:1px solid var(--border);
+  padding:10px 16px; display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+}
+.topbar .matchname{font-weight:700; font-size:15px; flex:1 1 auto; min-width:80px;}
+.topbar .matchname .setlabel{color:var(--gold); font-weight:600;}
+.selector-group{display:flex; align-items:center; gap:6px; background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:4px;}
+.selector-group .lbl{font-size:11px; color:var(--text-muted); padding:0 6px; text-transform:uppercase; letter-spacing:.06em;}
+.chip{
+  padding:7px 12px; border-radius:7px; font-size:14px; font-weight:600; background:transparent; color:var(--text-muted);
+}
+.chip.active{background:var(--gold); color:#1a1305;}
+.icon-btn{background:var(--bg-card); border:1px solid var(--border); border-radius:10px; padding:8px 12px; color:var(--text-muted); font-size:13px;}
+
+.scoreboard{
+  display:flex; align-items:center; justify-content:center; gap:22px; padding:18px 16px 10px;
+}
+.score-side{text-align:center; min-width:100px;}
+.score-side .teamlabel{font-size:13px; text-transform:uppercase; letter-spacing:.08em; color:var(--text-muted); margin-bottom:2px;}
+.score-side.serving .teamlabel{color:var(--gold);}
+.score-side .points{font-size:64px; line-height:1;}
+.score-side.noi .points{color:var(--noi);}
+.score-side.loro .points{color:var(--loro);}
+.serve-dot{width:9px; height:9px; border-radius:50%; background:var(--gold); margin:6px auto 0; opacity:0; box-shadow:0 0 8px var(--gold);}
+.score-side.serving .serve-dot{opacity:1;}
+.score-sep{font-size:32px; color:var(--text-muted); font-family:'Barlow Condensed';}
+
+.tabs{display:flex; padding:0 16px; gap:6px; border-bottom:1px solid var(--border);}
+.tab{padding:12px 18px; color:var(--text-muted); font-weight:600; font-size:14px; border-bottom:3px solid transparent;}
+.tab.active{color:var(--text); border-color:var(--gold);}
+.tabpanel{display:none; flex:1; overflow-y:auto; padding:18px 16px 90px;}
+.tabpanel.active{display:block;}
+
+.action-row{display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; max-width:640px; margin:0 auto;}
+.action-btn{
+  padding:26px 10px; border-radius:16px; font-size:20px; font-weight:700; font-family:'Barlow Condensed';
+  border:1px solid var(--border); background:var(--bg-card); color:var(--text); letter-spacing:.02em;
+}
+.action-btn.ace{background:var(--gold-dim); color:var(--gold); border-color:var(--gold);}
+.action-btn.errore{background:var(--loro-dim); color:var(--loro); border-color:var(--loro);}
+.action-btn.gioco{background:var(--noi-dim); color:var(--noi); border-color:var(--noi);}
+.action-hint{text-align:center; color:var(--text-muted); font-size:13px; margin:14px 0 22px;}
+
+.undo-row{display:flex; justify-content:center; margin-top:20px;}
+.undo-btn{color:var(--text-muted); background:none; font-size:13px; text-decoration:underline;}
+
+.quick-log{max-width:640px; margin:26px auto 0; border-top:1px solid var(--border); padding-top:18px;}
+.quick-log h3{font-size:14px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted); margin:0 0 10px;}
+.quick-log .btn{width:100%;}
+
+.log-feed{max-width:640px; margin:20px auto 0; display:flex; flex-direction:column; gap:6px;}
+.log-item{display:flex; justify-content:space-between; padding:9px 12px; background:var(--bg-card); border:1px solid var(--border); border-radius:8px; font-size:13px; color:var(--text-muted);}
+.log-item b{color:var(--text);}
+
+/* ---------- STATS ---------- */
+.stat-filters{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px;}
+.stat-filters select{
+  background:var(--bg-card); color:var(--text); border:1px solid var(--border); border-radius:8px;
+  padding:9px 10px; font-size:14px;
+}
+.stat-block{background:var(--bg-elevated); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:16px;}
+.stat-block h3{margin:0 0 12px; font-size:16px; font-family:'Inter'; font-weight:700;}
+.kpi-row{display:flex; gap:14px; flex-wrap:wrap;}
+.kpi{flex:1; min-width:130px; background:var(--bg-card); border-radius:10px; padding:14px; text-align:center;}
+.kpi .val{font-size:34px; font-family:'Barlow Condensed'; font-weight:700;}
+.kpi .lbl{font-size:11px; color:var(--text-muted); text-transform:uppercase; letter-spacing:.06em; margin-top:2px;}
+table{width:100%; border-collapse:collapse; font-size:13px;}
+th,td{padding:8px 6px; text-align:center; border-bottom:1px solid var(--border);}
+th{color:var(--text-muted); font-weight:600; text-transform:uppercase; font-size:11px; letter-spacing:.04em;}
+.empty-note{color:var(--text-muted); font-size:13px; text-align:center; padding:20px 0;}
+
+/* ---------- COURT ZONES ---------- */
+.court{
+  position:relative; width:100%; max-width:280px; margin:0 auto; aspect-ratio:1/1;
+  background:var(--bg-card); border:2px solid var(--border); border-radius:8px;
+  display:grid; gap:4px; padding:6px;
+}
+.court.z9{grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(3,1fr);}
+.court.attackpos{grid-template-columns:repeat(3,1fr); grid-template-rows:repeat(2,1fr);}
+.net-label{position:absolute; top:-20px; left:0; right:0; text-align:center; font-size:11px; color:var(--gold); text-transform:uppercase; letter-spacing:.08em;}
+.zone-btn{
+  border-radius:6px; background:var(--bg-elevated); border:1px solid var(--border); color:var(--text-muted);
+  font-family:'Barlow Condensed'; font-size:22px; font-weight:700; display:flex; align-items:center; justify-content:center;
+}
+.zone-btn.selected{background:var(--gold); color:#1a1305; border-color:var(--gold);}
+.zone-btn:disabled{opacity:.25;}
+
+/* ---------- MODAL ---------- */
+.modal-overlay{
+  position:fixed; inset:0; background:rgba(6,9,13,.72); display:flex; align-items:flex-end; justify-content:center;
+  z-index:100; backdrop-filter:blur(2px);
+}
+@media(min-width:700px){.modal-overlay{align-items:center;}}
+.modal{
+  background:var(--bg-elevated); border:1px solid var(--border); border-radius:20px 20px 0 0;
+  width:100%; max-width:520px; max-height:92vh; overflow-y:auto; padding:22px 20px 28px;
+}
+@media(min-width:700px){.modal{border-radius:20px;}}
+.modal h2{margin:0 0 4px; font-size:22px;}
+.modal .step-note{color:var(--text-muted); font-size:13px; margin-bottom:16px;}
+.modal-close{position:absolute; margin-left:calc(100% - 40px); background:var(--bg-card); border-radius:50%; width:32px; height:32px; color:var(--text-muted); font-size:16px;}
+.jersey-grid{display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px;}
+.jersey-chip{padding:10px 16px; border-radius:9px; background:var(--bg-card); border:1px solid var(--border); font-weight:700; font-family:'Barlow Condensed'; font-size:18px; color:var(--text);}
+.jersey-chip.selected{background:var(--noi); color:#fff; border-color:var(--noi);}
+.rotazione-row{display:flex; gap:6px; margin-bottom:6px;}
+.rotazione-row .chip{flex:1; text-align:center; background:var(--bg-card); border:1px solid var(--border);}
+.esito-row{display:flex; gap:8px; flex-wrap:wrap; margin-top:14px;}
+.esito-row .chip{background:var(--bg-card); border:1px solid var(--border); padding:9px 14px;}
+.modal-actions{display:flex; gap:10px; margin-top:22px;}
+.modal-actions .btn{flex:1;}
+.added-list{margin-top:16px; display:flex; flex-direction:column; gap:6px;}
+.added-item{display:flex; justify-content:space-between; align-items:center; background:var(--bg-card); border:1px solid var(--border); border-radius:8px; padding:8px 12px; font-size:13px;}
+.added-item button{color:var(--loro); background:none; font-size:12px; text-decoration:underline;}
+
+.toast{
+  position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:var(--bg-card); border:1px solid var(--border);
+  padding:10px 18px; border-radius:30px; font-size:13px; z-index:200; color:var(--text); box-shadow:0 6px 20px rgba(0,0,0,.4);
+}
+</style>
+</head>
+<body>
+
+<!-- ============ SETUP SCREEN ============ -->
+<div id="screen-setup" class="screen">
+  <div class="setup-card">
+    <div class="brand"><span class="ball"></span><h1>Scout Volley</h1></div>
+    <p class="subtitle">Battuta, attacco, side out e break point — live da bordocampo.</p>
+
+    <div id="setup-url-block">
+      <label>Indirizzo Google Apps Script (una sola volta)</label>
+      <input type="text" id="input-scripturl" placeholder="https://script.google.com/macros/s/.../exec">
+      <button class="btn btn-primary btn-block" id="btn-save-url">Salva indirizzo</button>
+    </div>
+
+    <div id="setup-match-block" class="hidden">
+      <label>Partita</label>
+      <div class="match-list" id="match-list"></div>
+      <input type="text" id="input-newmatch" placeholder="es. Noi vs Rossoblù Volley — 12/07">
+      <button class="btn btn-primary btn-block" id="btn-create-match">Crea nuova partita</button>
+      <a class="small-link" id="link-change-url">Cambia indirizzo script</a>
+    </div>
+  </div>
+</div>
+
+<!-- ============ MAIN SCREEN ============ -->
+<div id="screen-main" class="screen">
+  <div class="topbar">
+    <div class="matchname"><span id="topbar-matchname">—</span> <span class="setlabel" id="topbar-setlabel">SET 1</span></div>
+    <div class="selector-group" id="set-selector">
+      <span class="lbl">Set</span>
+      <button class="chip" data-set="1">1</button>
+      <button class="chip" data-set="2">2</button>
+      <button class="chip" data-set="3">3</button>
+      <button class="chip" data-set="4">4</button>
+      <button class="chip" data-set="5">5</button>
+    </div>
+    <div class="selector-group" id="rot-selector">
+      <span class="lbl">Rot. avv.</span>
+      <button class="chip" data-rot="1">R1</button>
+      <button class="chip" data-rot="2">R2</button>
+      <button class="chip" data-rot="3">R3</button>
+      <button class="chip" data-rot="4">R4</button>
+      <button class="chip" data-rot="5">R5</button>
+      <button class="chip" data-rot="6">R6</button>
+    </div>
+    <button class="icon-btn" id="btn-menu">⋯</button>
+  </div>
+
+  <div class="scoreboard">
+    <div class="score-side noi" id="score-noi-box">
+      <div class="teamlabel">Noi</div>
+      <div class="points num" id="score-noi">0</div>
+      <div class="serve-dot"></div>
+    </div>
+    <div class="score-sep">–</div>
+    <div class="score-side loro" id="score-loro-box">
+      <div class="teamlabel">Loro</div>
+      <div class="points num" id="score-loro">0</div>
+      <div class="serve-dot"></div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" data-tab="punteggio">Punteggio</div>
+    <div class="tab" data-tab="statistiche">Statistiche</div>
+  </div>
+
+  <div class="tabpanel active" id="panel-punteggio">
+    <div class="action-hint" id="serve-hint">Al servizio: <b>Loro</b> — seleziona l'esito della battuta</div>
+    <div class="action-row">
+      <button class="action-btn ace" id="btn-ace">ACE</button>
+      <button class="action-btn errore" id="btn-errore">ERRORE</button>
+      <button class="action-btn gioco" id="btn-gioco">IN GIOCO</button>
+    </div>
+
+    <div class="undo-row"><button class="undo-btn" id="btn-undo-punto">Annulla ultimo punto</button></div>
+
+    <div class="quick-log">
+      <h3>Registro rapido</h3>
+      <button class="btn btn-block" id="btn-open-attacco">+ Attacco avversario (fuori punto)</button>
+    </div>
+
+    <div class="log-feed" id="log-feed"></div>
+  </div>
+
+  <div class="tabpanel" id="panel-statistiche">
+    <div class="stat-filters">
+      <select id="filter-set">
+        <option value="all">Tutti i set</option>
+        <option value="1">Set 1</option><option value="2">Set 2</option><option value="3">Set 3</option>
+        <option value="4">Set 4</option><option value="5">Set 5</option>
+      </select>
+      <select id="filter-rot">
+        <option value="all">Tutte le rotazioni</option>
+        <option value="1">R1</option><option value="2">R2</option><option value="3">R3</option>
+        <option value="4">R4</option><option value="5">R5</option><option value="6">R6</option>
+      </select>
+      <select id="filter-player"><option value="all">Tutte le giocatrici</option></select>
+      <button class="icon-btn" id="btn-refresh-stats">↻ Aggiorna</button>
+    </div>
+
+    <div class="stat-block">
+      <h3>Side out &amp; Break point</h3>
+      <div id="sideout-table"></div>
+    </div>
+
+    <div class="stat-block">
+      <h3>Direzioni di battuta avversaria</h3>
+      <div id="serve-table"></div>
+    </div>
+
+    <div class="stat-block">
+      <h3>Direzioni di attacco avversario</h3>
+      <div id="attack-table"></div>
+    </div>
+  </div>
+</div>
+
+<div id="modal-root"></div>
+
+<script>
+/* ==================== CONFIG & STATE ==================== */
+var SCRIPT_URL = localStorage.getItem('sv_scripturl') || '';
+var state = {
+  match: localStorage.getItem('sv_match') || '',
+  set: 1,
+  rot: 1,
+  server: 'Loro',
+  data: { punti: [], battute: [], attacchi: [] },
+  jerseyRecent: JSON.parse(localStorage.getItem('sv_jerseys') || '[]')
+};
+
+/* ==================== JSONP HELPER ==================== */
+function jsonp(params) {
+  return new Promise(function (resolve, reject) {
+    var cbName = 'cb_' + Date.now() + '_' + Math.floor(Math.random() * 100000);
+    window[cbName] = function (data) {
+      resolve(data);
+      delete window[cbName];
+      script.remove();
+    };
+    var qs = Object.keys(params).map(function (k) {
+      return encodeURIComponent(k) + '=' + encodeURIComponent(params[k]);
+    }).join('&');
+    var script = document.createElement('script');
+    script.src = SCRIPT_URL + '?' + qs + '&callback=' + cbName;
+    script.onerror = function () { reject(new Error('network')); delete window[cbName]; script.remove(); };
+    document.body.appendChild(script);
+    setTimeout(function () { if (window[cbName]) { reject(new Error('timeout')); delete window[cbName]; } }, 15000);
+  });
+}
+function toast(msg) {
+  var t = document.createElement('div');
+  t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(function () { t.remove(); }, 2200);
+}
+
+/* ==================== SETUP SCREEN ==================== */
+var elSetupUrlBlock = document.getElementById('setup-url-block');
+var elSetupMatchBlock = document.getElementById('setup-match-block');
+
+function initSetup() {
+  if (SCRIPT_URL) {
+    document.getElementById('input-scripturl').value = SCRIPT_URL;
+    showMatchBlock();
+  }
+}
+document.getElementById('btn-save-url').onclick = function () {
+  var v = document.getElementById('input-scripturl').value.trim();
+  if (!v) { toast('Inserisci un indirizzo valido'); return; }
+  SCRIPT_URL = v;
+  localStorage.setItem('sv_scripturl', v);
+  showMatchBlock();
+};
+document.getElementById('link-change-url').onclick = function () {
+  elSetupMatchBlock.classList.add('hidden');
+  elSetupUrlBlock.classList.remove('hidden');
+};
+function showMatchBlock() {
+  elSetupUrlBlock.classList.add('hidden');
+  elSetupMatchBlock.classList.remove('hidden');
+  refreshMatchList();
+}
+function refreshMatchList() {
+  jsonp({ action: 'getMatches' }).then(function (res) {
+    var box = document.getElementById('match-list');
+    box.innerHTML = '';
+    (res.matches || []).forEach(function (m) {
+      var d = document.createElement('div');
+      d.className = 'match-item';
+      d.innerHTML = '<span>' + m + '</span><button class="btn">Apri</button>';
+      d.querySelector('button').onclick = function () { openMatch(m); };
+      box.appendChild(d);
+    });
+  }).catch(function () { toast('Impossibile contattare lo script. Controlla l\'indirizzo.'); });
+}
+document.getElementById('btn-create-match').onclick = function () {
+  var name = document.getElementById('input-newmatch').value.trim();
+  if (!name) { toast('Dai un nome alla partita'); return; }
+  jsonp({ action: 'createMatch', nome: name }).then(function () { openMatch(name); });
+};
+function openMatch(name) {
+  state.match = name;
+  localStorage.setItem('sv_match', name);
+  document.getElementById('screen-setup').style.display = 'none';
+  document.getElementById('screen-main').style.display = 'flex';
+  document.getElementById('topbar-matchname').textContent = name;
+  startSetFlow(1);
+}
+
+/* ==================== SET / ROTATION SELECTORS ==================== */
+function setActiveChip(groupSel, dataAttr, value) {
+  document.querySelectorAll(groupSel + ' .chip').forEach(function (c) {
+    c.classList.toggle('active', c.getAttribute(dataAttr) == value);
+  });
+}
+document.getElementById('set-selector').addEventListener('click', function (e) {
+  var b = e.target.closest('.chip'); if (!b) return;
+  startSetFlow(parseInt(b.getAttribute('data-set')));
+});
+document.getElementById('rot-selector').addEventListener('click', function (e) {
+  var b = e.target.closest('.chip'); if (!b) return;
+  state.rot = parseInt(b.getAttribute('data-rot'));
+  setActiveChip('#rot-selector', 'data-rot', state.rot);
+});
+
+function startSetFlow(setNum) {
+  state.set = setNum;
+  setActiveChip('#set-selector', 'data-set', setNum);
+  document.getElementById('topbar-setlabel').textContent = 'SET ' + setNum;
+  fetchAllData().then(function () {
+    var setPunti = state.data.punti.filter(function (p) { return String(p.Set) == String(setNum); });
+    if (setPunti.length === 0) {
+      askInitialServer();
+    } else {
+      state.server = setPunti[setPunti.length - 1].Winner;
+      renderScore();
+    }
+  });
+}
+function askInitialServer() {
+  openModal(
+    '<h2>Inizio Set ' + state.set + '</h2>' +
+    '<p class="step-note">Chi serve per prima in questo set?</p>' +
+    '<div class="modal-actions">' +
+      '<button class="btn btn-noi" style="flex:1" id="init-noi">Serviamo Noi</button>' +
+      '<button class="btn btn-loro" style="flex:1" id="init-loro">Servono Loro</button>' +
+    '</div>'
+  );
+  document.getElementById('init-noi').onclick = function () { state.server = 'Noi'; renderScore(); closeModal(); };
+  document.getElementById('init-loro').onclick = function () { state.server = 'Loro'; renderScore(); closeModal(); };
+}
+
+/* ==================== TABS ==================== */
+document.querySelectorAll('.tab').forEach(function (t) {
+  t.onclick = function () {
+    document.querySelectorAll('.tab').forEach(function (x) { x.classList.remove('active'); });
+    document.querySelectorAll('.tabpanel').forEach(function (x) { x.classList.remove('active'); });
+    t.classList.add('active');
+    document.getElementById('panel-' + t.getAttribute('data-tab')).classList.add('active');
+    if (t.getAttribute('data-tab') === 'statistiche') renderStats();
+  };
+});
+
+/* ==================== SCORE / POINT LOGGING ==================== */
+function renderScore() {
+  var setPunti = state.data.punti.filter(function (p) { return String(p.Set) == String(state.set); });
+  var sn = setPunti.filter(function (p) { return p.Winner === 'Noi'; }).length;
+  var sl = setPunti.filter(function (p) { return p.Winner === 'Loro'; }).length;
+  document.getElementById('score-noi').textContent = sn;
+  document.getElementById('score-loro').textContent = sl;
+  document.getElementById('score-noi-box').classList.toggle('serving', state.server === 'Noi');
+  document.getElementById('score-loro-box').classList.toggle('serving', state.server === 'Loro');
+  document.getElementById('serve-hint').innerHTML = 'Al servizio: <b>' + state.server + '</b> — seleziona l\'esito della battuta';
+  renderLogFeed();
+}
+function renderLogFeed() {
+  var feed = document.getElementById('log-feed');
+  var setPunti = state.data.punti.filter(function (p) { return String(p.Set) == String(state.set); }).slice(-8).reverse();
+  feed.innerHTML = setPunti.map(function (p) {
+    return '<div class="log-item"><span>' + p.Server + ' serve — ' + p.Quality + '</span><b>Punto ' + p.Winner + '</b></div>';
+  }).join('');
+}
+
+document.getElementById('btn-ace').onclick = function () { finalizePunto('Ace', state.server); };
+document.getElementById('btn-errore').onclick = function () {
+  var winner = state.server === 'Noi' ? 'Loro' : 'Noi';
+  finalizePunto('Errore', winner);
+};
+document.getElementById('btn-gioco').onclick = function () {
+  openModal(
+    '<h2>Punto su azione</h2>' +
+    '<p class="step-note">Chi ha vinto lo scambio?</p>' +
+    '<div class="modal-actions">' +
+      '<button class="btn btn-noi" style="flex:1" id="gioco-noi">Punto Noi</button>' +
+      '<button class="btn btn-loro" style="flex:1" id="gioco-loro">Punto Loro</button>' +
+    '</div>'
+  );
+  document.getElementById('gioco-noi').onclick = function () { closeModal(); finalizePunto('InGioco', 'Noi', true); };
+  document.getElementById('gioco-loro').onclick = function () { closeModal(); finalizePunto('InGioco', 'Loro', true); };
+};
+
+var lastPuntoServerBeforeFinalize = null;
+function finalizePunto(quality, winner, offerAttackLog) {
+  var server = state.server;
+  var payload = { action: 'addPunto', match: state.match, set: state.set, server: server, quality: quality, winner: winner };
+  jsonp(payload).then(function (res) {
+    state.data.punti.push({ ID: res.id, Match: state.match, Set: state.set, Server: server, Quality: quality, Winner: winner });
+    state.server = winner;
+    renderScore();
+    if (server === 'Loro' && quality !== 'Errore') {
+      openServeZoneModal(function () {
+        if (offerAttackLog) offerAttackLogging();
+      });
+    } else if (offerAttackLog) {
+      offerAttackLogging();
+    }
+  }).catch(function () { toast('Errore di rete: punto non salvato'); });
+}
+
+document.getElementById('btn-undo-punto').onclick = function () {
+  var setPunti = state.data.punti.filter(function (p) { return String(p.Set) == String(state.set); });
+  if (setPunti.length === 0) { toast('Nessun punto da annullare'); return; }
+  var last = setPunti[setPunti.length - 1];
+  jsonp({ action: 'deleteRow', tipo: 'Punti', id: last.ID }).then(function () {
+    var idx = state.data.punti.findIndex(function (p) { return p.ID === last.ID; });
+    if (idx > -1) state.data.punti.splice(idx, 1);
+    var remaining = state.data.punti.filter(function (p) { return String(p.Set) == String(state.set); });
+    state.server = remaining.length ? remaining[remaining.length - 1].Winner : state.server;
+    renderScore();
+    toast('Ultimo punto annullato');
+  });
+};
+
+/* ==================== SERVE ZONE MODAL ==================== */
+var serveModalState = { rot: 1, giocatrice: null, zona: null };
+function openServeZoneModal(onDone) {
+  serveModalState = { rot: state.rot, giocatrice: null, zona: null };
+  renderServeModal(onDone);
+}
+function renderServeModal(onDone) {
+  openModal(
+    '<h2>Direzione battuta avversaria</h2>' +
+    '<p class="step-note">Rotazione, numero di maglia e zona in cui atterra la battuta.</p>' +
+    '<label style="margin-top:0">Rotazione avversaria</label>' +
+    '<div class="rotazione-row" id="sm-rot"></div>' +
+    '<label>Numero di maglia</label>' +
+    '<div class="jersey-grid" id="sm-jersey"></div>' +
+    '<input type="text" id="sm-jersey-input" inputmode="numeric" placeholder="Nuovo numero...">' +
+    '<label>Zona di destinazione</label>' +
+    '<div class="net-label" style="position:static; margin-bottom:6px;">Rete</div>' +
+    '<div class="court z9" id="sm-court"></div>' +
+    '<div class="modal-actions">' +
+      '<button class="btn" id="sm-skip" style="flex:1">Salta</button>' +
+      '<button class="btn btn-primary" id="sm-save" style="flex:1">Salva</button>' +
+    '</div>'
+  );
+  // rotazione chips
+  var rotBox = document.getElementById('sm-rot');
+  for (var r = 1; r <= 6; r++) {
+    var b = document.createElement('button');
+    b.className = 'chip' + (r === serveModalState.rot ? ' active' : '');
+    b.textContent = 'R' + r;
+    b.onclick = (function (rr, btn) { return function () {
+      serveModalState.rot = rr;
+      rotBox.querySelectorAll('.chip').forEach(function (c) { c.classList.remove('active'); });
+      btn.classList.add('active');
+    }; })(r, b);
+    rotBox.appendChild(b);
+  }
+  renderJerseyGrid('sm-jersey', function (num) { serveModalState.giocatrice = num; }, serveModalState.giocatrice);
+  document.getElementById('sm-jersey-input').onchange = function (e) {
+    var v = e.target.value.trim();
+    if (v) { serveModalState.giocatrice = v; addRecentJersey(v); renderJerseyGrid('sm-jersey', function (num) { serveModalState.giocatrice = num; }, v); }
+  };
+  var court = document.getElementById('sm-court');
+  for (var z = 1; z <= 9; z++) {
+    var zb = document.createElement('button');
+    zb.className = 'zone-btn'; zb.textContent = z;
+    zb.onclick = (function (zz, elz) { return function () {
+      serveModalState.zona = zz;
+      court.querySelectorAll('.zone-btn').forEach(function (c) { c.classList.remove('selected'); });
+      elz.classList.add('selected');
+    }; })(z, zb);
+    court.appendChild(zb);
+  }
+  document.getElementById('sm-skip').onclick = function () { closeModal(); if (onDone) onDone(); };
+  document.getElementById('sm-save').onclick = function () {
+    if (!serveModalState.zona) { toast('Seleziona la zona di destinazione'); return; }
+    jsonp({
+      action: 'addBattuta', match: state.match, set: state.set,
+      rotazione: serveModalState.rot, giocatrice: serveModalState.giocatrice || '?', zona: serveModalState.zona
+    }).then(function () {
+      state.data.battute.push({ Match: state.match, Set: state.set, Rotazione: serveModalState.rot, Giocatrice: serveModalState.giocatrice || '?', Zona: serveModalState.zona });
+      toast('Battuta registrata');
+      closeModal();
+      if (onDone) onDone();
+    });
+  };
+}
+function renderJerseyGrid(elId, onSelect, selected) {
+  var box = document.getElementById(elId);
+  box.innerHTML = '';
+  state.jerseyRecent.forEach(function (num) {
+    var c = document.createElement('button');
+    c.className = 'jersey-chip' + (String(num) === String(selected) ? ' selected' : '');
+    c.textContent = num;
+    c.onclick = function () {
+      box.querySelectorAll('.jersey-chip').forEach(function (x) { x.classList.remove('selected'); });
+      c.classList.add('selected');
+      onSelect(num);
+    };
+    box.appendChild(c);
+  });
+}
+function addRecentJersey(num) {
+  state.jerseyRecent = state.jerseyRecent.filter(function (n) { return String(n) !== String(num); });
+  state.jerseyRecent.unshift(num);
+  state.jerseyRecent = state.jerseyRecent.slice(0, 16);
+  localStorage.setItem('sv_jerseys', JSON.stringify(state.jerseyRecent));
+}
+
+/* ==================== ATTACK MODAL ==================== */
+var POSTI = [
+  { key: 4, label: '4', row: 0, col: 0 },
+  { key: 3, label: '3', row: 0, col: 1 },
+  { key: 2, label: '2', row: 0, col: 2 },
+  { key: 5, label: '5', row: 1, col: 0, disabled: true },
+  { key: 6, label: '6', row: 1, col: 1 },
+  { key: 1, label: '1', row: 1, col: 2 }
+];
+var attackModalState;
+function offerAttackLogging() {
+  openModal(
+    '<h2>Attacco avversario?</h2>' +
+    '<p class="step-note">Vuoi registrare l\'attacco (o gli attacchi) di questo scambio?</p>' +
+    '<div class="modal-actions">' +
+      '<button class="btn" style="flex:1" id="al-no">No, salta</button>' +
+      '<button class="btn btn-primary" style="flex:1" id="al-yes">Sì, registra</button>' +
+    '</div>'
+  );
+  document.getElementById('al-no').onclick = closeModal;
+  document.getElementById('al-yes').onclick = function () { openAttackModal(); };
+}
+document.getElementById('btn-open-attacco').onclick = function () { openAttackModal(); };
+
+function openAttackModal() {
+  attackModalState = { rot: state.rot, giocatrice: null, zonaAttacco: null, zonaDest: null, esito: 'Continua' };
+  renderAttackModal();
+}
+function renderAttackModal() {
+  openModal(
+    '<h2>Direzione attacco avversario</h2>' +
+    '<label style="margin-top:0">Rotazione avversaria</label>' +
+    '<div class="rotazione-row" id="am-rot"></div>' +
+    '<label>Numero di maglia</label>' +
+    '<div class="jersey-grid" id="am-jersey"></div>' +
+    '<input type="text" id="am-jersey-input" inputmode="numeric" placeholder="Nuovo numero...">' +
+    '<label>Posto di attacco</label>' +
+    '<div class="net-label" style="position:static; margin-bottom:6px;">Rete</div>' +
+    '<div class="court attackpos" id="am-court-attacker"></div>' +
+    '<label>Zona di destinazione</label>' +
+    '<div class="court z9" id="am-court-dest"></div>' +
+    '<label>Esito</label>' +
+    '<div class="esito-row" id="am-esito"></div>' +
+    '<div class="modal-actions">' +
+      '<button class="btn" id="am-close" style="flex:1">Chiudi</button>' +
+      '<button class="btn btn-primary" id="am-save" style="flex:1">Salva e aggiungi altro</button>' +
+    '</div>' +
+    '<div class="added-list" id="am-added"></div>'
+  );
+  var rotBox = document.getElementById('am-rot');
+  for (var r = 1; r <= 6; r++) {
+    var b = document.createElement('button');
+    b.className = 'chip' + (r === attackModalState.rot ? ' active' : '');
+    b.textContent = 'R' + r;
+    b.onclick = (function (rr, btn) { return function () {
+      attackModalState.rot = rr;
+      rotBox.querySelectorAll('.chip').forEach(function (c) { c.classList.remove('active'); });
+      btn.classList.add('active');
+    }; })(r, b);
+    rotBox.appendChild(b);
+  }
+  renderJerseyGrid('am-jersey', function (num) { attackModalState.giocatrice = num; }, attackModalState.giocatrice);
+  document.getElementById('am-jersey-input').onchange = function (e) {
+    var v = e.target.value.trim();
+    if (v) { attackModalState.giocatrice = v; addRecentJersey(v); renderJerseyGrid('am-jersey', function (num) { attackModalState.giocatrice = num; }, v); }
+  };
+  var courtA = document.getElementById('am-court-attacker');
+  POSTI.forEach(function (p) {
+    var zb = document.createElement('button');
+    zb.className = 'zone-btn'; zb.textContent = p.label;
+    zb.style.gridRow = (p.row + 1); zb.style.gridColumn = (p.col + 1);
+    if (p.disabled) { zb.disabled = true; }
+    else {
+      zb.onclick = function () {
+        attackModalState.zonaAttacco = p.key;
+        courtA.querySelectorAll('.zone-btn').forEach(function (c) { c.classList.remove('selected'); });
+        zb.classList.add('selected');
+      };
+    }
+    courtA.appendChild(zb);
+  });
+  var courtD = document.getElementById('am-court-dest');
+  for (var z = 1; z <= 9; z++) {
+    var db = document.createElement('button');
+    db.className = 'zone-btn'; db.textContent = z;
+    db.onclick = (function (zz, elz) { return function () {
+      attackModalState.zonaDest = zz;
+      courtD.querySelectorAll('.zone-btn').forEach(function (c) { c.classList.remove('selected'); });
+      elz.classList.add('selected');
+    }; })(z, db);
+    courtD.appendChild(db);
+  }
+  var esitoBox = document.getElementById('am-esito');
+  ['Punto', 'Errore', 'Murato', 'Continua'].forEach(function (e) {
+    var c = document.createElement('button');
+    c.className = 'chip' + (e === attackModalState.esito ? ' active' : '');
+    c.textContent = e;
+    c.onclick = function () {
+      attackModalState.esito = e;
+      esitoBox.querySelectorAll('.chip').forEach(function (x) { x.classList.remove('active'); });
+      c.classList.add('active');
+    };
+    esitoBox.appendChild(c);
+  });
+  document.getElementById('am-close').onclick = closeModal;
+  document.getElementById('am-save').onclick = function () {
+    if (!attackModalState.zonaAttacco || !attackModalState.zonaDest) { toast('Seleziona posto di attacco e zona di destinazione'); return; }
+    jsonp({
+      action: 'addAttacco', match: state.match, set: state.set, rotazione: attackModalState.rot,
+      giocatrice: attackModalState.giocatrice || '?', zonaAttacco: attackModalState.zonaAttacco,
+      zonaDest: attackModalState.zonaDest, esito: attackModalState.esito
+    }).then(function (res) {
+      state.data.attacchi.push({
+        ID: res.id, Match: state.match, Set: state.set, Rotazione: attackModalState.rot,
+        Giocatrice: attackModalState.giocatrice || '?', ZonaAttacco: attackModalState.zonaAttacco,
+        ZonaDestinazione: attackModalState.zonaDest, Esito: attackModalState.esito
+      });
+      toast('Attacco registrato');
+      var lastAtk = attackModalState;
+      attackModalState = { rot: lastAtk.rot, giocatrice: null, zonaAttacco: null, zonaDest: null, esito: 'Continua' };
+      renderAttackModal();
+    });
+  };
+}
+
+/* ==================== MODAL PLUMBING ==================== */
+function openModal(innerHtml) {
+  var root = document.getElementById('modal-root');
+  root.innerHTML =
+    '<div class="modal-overlay" id="modal-overlay">' +
+      '<div class="modal">' + innerHtml + '</div>' +
+    '</div>';
+}
+function closeModal() { document.getElementById('modal-root').innerHTML = ''; }
+
+/* ==================== DATA FETCH ==================== */
+function fetchAllData() {
+  return jsonp({ action: 'getData', match: state.match }).then(function (res) {
+    state.data.punti = res.punti || [];
+    state.data.battute = res.battute || [];
+    state.data.attacchi = res.attacchi || [];
+    renderScore();
+    return res;
+  }).catch(function () { toast('Impossibile aggiornare i dati'); });
+}
+
+/* ==================== STATISTICS ==================== */
+document.getElementById('btn-refresh-stats').onclick = function () { fetchAllData().then(renderStats); };
+['filter-set', 'filter-rot', 'filter-player'].forEach(function (id) {
+  document.getElementById(id).onchange = renderStats;
+});
+
+function renderStats() {
+  populatePlayerFilter();
+  var setFilter = document.getElementById('filter-set').value;
+  var rotFilter = document.getElementById('filter-rot').value;
+  var playerFilter = document.getElementById('filter-player').value;
+  renderSideOutTable(setFilter);
+  renderServeTable(setFilter, rotFilter, playerFilter);
+  renderAttackTable(setFilter, rotFilter, playerFilter);
+}
+function populatePlayerFilter() {
+  var sel = document.getElementById('filter-player');
+  var current = sel.value;
+  var players = new Set();
+  state.data.battute.forEach(function (b) { if (b.Giocatrice) players.add(String(b.Giocatrice)); });
+  state.data.attacchi.forEach(function (a) { if (a.Giocatrice) players.add(String(a.Giocatrice)); });
+  sel.innerHTML = '<option value="all">Tutte le giocatrici</option>' +
+    Array.from(players).sort().map(function (p) { return '<option value="' + p + '">#' + p + '</option>'; }).join('');
+  sel.value = players.has(current) ? current : 'all';
+}
+function renderSideOutTable(setFilter) {
+  var sets = setFilter === 'all' ? [1, 2, 3, 4, 5] : [parseInt(setFilter)];
+  var rowsHtml = '';
+  var totalLoroNonErr = 0, totalSideOutNum = 0, totalNoiServe = 0, totalBreakNum = 0;
+  sets.forEach(function (s) {
+    var rows = state.data.punti.filter(function (p) { return String(p.Set) == String(s); });
+    if (rows.length === 0) return;
+    var loroRows = rows.filter(function (p) { return p.Server === 'Loro'; });
+    var loroNonErr = loroRows.filter(function (p) { return p.Quality !== 'Errore'; });
+    var sideOutNum = loroNonErr.filter(function (p) { return p.Winner === 'Noi'; }).length;
+    var noiRows = rows.filter(function (p) { return p.Server === 'Noi'; });
+    var breakNum = noiRows.filter(function (p) { return p.Winner === 'Noi'; }).length;
+    var soPct = loroNonErr.length ? (sideOutNum / loroNonErr.length * 100).toFixed(0) : '–';
+    var bpPct = noiRows.length ? (breakNum / noiRows.length * 100).toFixed(0) : '–';
+    totalLoroNonErr += loroNonErr.length; totalSideOutNum += sideOutNum;
+    totalNoiServe += noiRows.length; totalBreakNum += breakNum;
+    rowsHtml += '<tr><td>Set ' + s + '</td><td>' + soPct + '%</td><td>' + sideOutNum + '/' + loroNonErr.length + '</td>' +
+      '<td>' + bpPct + '%</td><td>' + breakNum + '/' + noiRows.length + '</td></tr>';
+  });
+  if (!rowsHtml) { document.getElementById('sideout-table').innerHTML = '<div class="empty-note">Nessun punto registrato.</div>'; return; }
+  var totSoPct = totalLoroNonErr ? (totalSideOutNum / totalLoroNonErr * 100).toFixed(0) : '–';
+  var totBpPct = totalNoiServe ? (totalBreakNum / totalNoiServe * 100).toFixed(0) : '–';
+  document.getElementById('sideout-table').innerHTML =
+    '<div class="kpi-row">' +
+      '<div class="kpi"><div class="val" style="color:var(--noi)">' + totSoPct + '%</div><div class="lbl">Side out totale</div></div>' +
+      '<div class="kpi"><div class="val" style="color:var(--gold)">' + totBpPct + '%</div><div class="lbl">Break point totale</div></div>' +
+    '</div>' +
+    '<table style="margin-top:14px"><tr><th>Set</th><th>Side out</th><th>Punti/Battute</th><th>Break pt</th><th>Punti/Battute</th></tr>' + rowsHtml + '</table>';
+}
+function renderServeTable(setFilter, rotFilter, playerFilter) {
+  var rows = state.data.battute.filter(function (b) {
+    if (setFilter !== 'all' && String(b.Set) != setFilter) return false;
+    if (rotFilter !== 'all' && String(b.Rotazione) != rotFilter) return false;
+    if (playerFilter !== 'all' && String(b.Giocatrice) != playerFilter) return false;
+    return true;
+  });
+  if (!rows.length) { document.getElementById('serve-table').innerHTML = '<div class="empty-note">Nessuna battuta registrata per questi filtri.</div>'; return; }
+  var counts = {};
+  rows.forEach(function (b) { counts[b.Zona] = (counts[b.Zona] || 0) + 1; });
+  var html = '<table><tr><th>Zona</th><th>Battute</th><th>%</th></tr>';
+  Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; }).forEach(function (z) {
+    html += '<tr><td>Z' + z + '</td><td>' + counts[z] + '</td><td>' + (counts[z] / rows.length * 100).toFixed(0) + '%</td></tr>';
+  });
+  html += '</table>';
+  document.getElementById('serve-table').innerHTML = html;
+}
+function renderAttackTable(setFilter, rotFilter, playerFilter) {
+  var rows = state.data.attacchi.filter(function (a) {
+    if (setFilter !== 'all' && String(a.Set) != setFilter) return false;
+    if (rotFilter !== 'all' && String(a.Rotazione) != rotFilter) return false;
+    if (playerFilter !== 'all' && String(a.Giocatrice) != playerFilter) return false;
+    return true;
+  });
+  if (!rows.length) { document.getElementById('attack-table').innerHTML = '<div class="empty-note">Nessun attacco registrato per questi filtri.</div>'; return; }
+  var counts = {};
+  rows.forEach(function (a) {
+    var key = a.ZonaAttacco + '→' + a.ZonaDestinazione;
+    counts[key] = (counts[key] || 0) + 1;
+  });
+  var html = '<table><tr><th>Posto → Zona</th><th>Attacchi</th><th>%</th></tr>';
+  Object.keys(counts).sort(function (a, b) { return counts[b] - counts[a]; }).forEach(function (k) {
+    html += '<tr><td>Posto ' + k + '</td><td>' + counts[k] + '</td><td>' + (counts[k] / rows.length * 100).toFixed(0) + '%</td></tr>';
+  });
+  html += '</table>';
+  document.getElementById('attack-table').innerHTML = html;
+}
+
+/* ==================== MENU ==================== */
+document.getElementById('btn-menu').onclick = function () {
+  openModal(
+    '<h2>Menu</h2>' +
+    '<div class="modal-actions" style="flex-direction:column">' +
+      '<button class="btn btn-block" id="menu-newmatch">Cambia partita</button>' +
+      '<button class="btn btn-block" id="menu-refresh">Aggiorna dati dal foglio</button>' +
+      '<button class="btn btn-block" id="menu-close">Chiudi</button>' +
+    '</div>'
+  );
+  document.getElementById('menu-newmatch').onclick = function () {
+    localStorage.removeItem('sv_match');
+    location.reload();
+  };
+  document.getElementById('menu-refresh').onclick = function () { fetchAllData().then(closeModal); };
+  document.getElementById('menu-close').onclick = closeModal;
+};
+
+/* ==================== INIT ==================== */
+setActiveChip('#rot-selector', 'data-rot', state.rot);
+initSetup();
+if (SCRIPT_URL && state.match) { openMatch(state.match); }
+</script>
+</body>
+</html>
