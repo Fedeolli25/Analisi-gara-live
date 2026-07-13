@@ -22,6 +22,7 @@
   --gold:#E8A33D;
   --gold-dim:#4A3A1E;
   --green:#4CAF7D;
+  --murato:#9B6FE0;
 }
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none;}
 html,body{height:100%;}
@@ -81,13 +82,18 @@ input[type=text],input[type=number]{width:100%; background:var(--bg-card); borde
 .tabpanel{display:none; flex:1; overflow-y:auto; padding:14px 16px 60px;}
 .tabpanel.active{display:block;}
 
-.action-row{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; max-width:640px; margin:0 auto;}
+.action-row{display:grid; grid-template-columns:1fr 1fr; gap:10px; max-width:640px; margin:0 auto;}
 .action-btn{padding:16px 10px; border-radius:14px; font-size:18px; font-weight:700; font-family:'Barlow Condensed'; border:1px solid var(--border); background:var(--bg-card); color:var(--text); letter-spacing:.02em;}
-.action-btn.ace{background:var(--gold-dim); color:var(--gold); border-color:var(--gold);}
-.action-btn.errore{background:var(--loro-dim); color:var(--loro); border-color:var(--loro);}
-.action-btn.gioco{background:var(--noi-dim); color:var(--noi); border-color:var(--noi);}
+.action-btn.battuta-noi{background:var(--noi-dim); color:var(--noi); border-color:var(--noi);}
+.action-btn.battuta-loro{background:var(--loro-dim); color:var(--loro); border-color:var(--loro);}
+.action-btn.punto-noi{background:var(--gold); color:#1a1305; border-color:var(--gold); font-size:20px;}
+.action-btn.punto-loro{background:var(--bg-card); color:var(--text-muted); border-color:var(--border); font-size:20px;}
+.action-btn.active-serve{box-shadow:0 0 0 3px var(--gold) inset;}
 .undo-row{display:flex; justify-content:center; margin:10px 0 4px;}
 .undo-btn{color:var(--text-muted); background:none; font-size:12px; text-decoration:underline;}
+.line-legend{display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; font-size:11px; color:var(--text-muted);}
+.line-legend span{display:inline-flex; align-items:center; gap:4px;}
+.line-legend i{display:inline-block; width:14px; height:2px;}
 
 .courts-row{display:flex; gap:14px; margin-top:16px; flex-wrap:wrap; justify-content:center; max-width:900px; margin-left:auto; margin-right:auto;}
 .court-panel{flex:1; min-width:270px; max-width:400px; background:var(--bg-elevated); border:1px solid var(--border); border-radius:16px; padding:12px;}
@@ -225,10 +231,13 @@ th{color:var(--text-muted); font-weight:600; text-transform:uppercase; font-size
   </div>
 
   <div class="tabpanel active" id="panel-punteggio">
-    <div class="action-row">
-      <button class="action-btn ace" id="btn-ace">ACE</button>
-      <button class="action-btn errore" id="btn-errore">ERRORE</button>
-      <button class="action-btn gioco" id="btn-gioco">IN GIOCO</button>
+    <div class="action-row" id="battuta-row">
+      <button class="action-btn battuta-noi" id="btn-battuta-noi">Battuta Nostra</button>
+      <button class="action-btn battuta-loro" id="btn-battuta-loro">Battuta Avversaria</button>
+    </div>
+    <div class="action-row" id="punto-row" style="margin-top:10px">
+      <button class="action-btn punto-noi" id="btn-punto-noi">Punto Noi</button>
+      <button class="action-btn punto-loro" id="btn-punto-loro">Punto Loro</button>
     </div>
     <div class="undo-row"><button class="undo-btn" id="btn-undo-punto">Annulla ultimo punto</button></div>
 
@@ -243,11 +252,13 @@ th{color:var(--text-muted); font-weight:600; text-transform:uppercase; font-size
           <button class="chip" data-r="!6">!6</button>
         </div>
         <div id="svg-attack-cp-holder"></div>
+        <div class="line-legend"><span><i style="background:var(--green)"></i>Punto</span><span><i style="background:var(--loro)"></i>Errore</span><span><i style="background:var(--murato)"></i>Murato</span><span><i style="background:var(--gold);border-top:2px dashed var(--gold);height:0"></i>Continua</span></div>
       </div>
       <div class="court-panel" id="panel-attack-bp">
         <h4>Attacco avversario — Break point / Transizione</h4>
         <div class="subinfo">Contrattacchi e palle di ritorno (in battuta o dopo il primo attacco)</div>
         <div id="svg-attack-bp-holder"></div>
+        <div class="line-legend"><span><i style="background:var(--green)"></i>Punto</span><span><i style="background:var(--loro)"></i>Errore</span><span><i style="background:var(--murato)"></i>Murato</span><span><i style="background:var(--gold);border-top:2px dashed var(--gold);height:0"></i>Continua</span></div>
       </div>
       <div class="court-panel" id="panel-serve-court">
         <h4>Battuta avversaria</h4>
@@ -373,6 +384,19 @@ function svgLineMarkup(p1, p2, opacity, colorVar) {
   return '<line x1="' + p1.x + '" y1="' + p1.y + '" x2="' + p2.x + '" y2="' + p2.y + '" ' +
     'style="stroke:var(' + (colorVar || '--gold') + ');stroke-width:2;opacity:' + opacity + '"></line>' +
     '<circle cx="' + p2.x + '" cy="' + p2.y + '" r="3.5" style="fill:var(' + (colorVar || '--gold') + ');opacity:' + opacity + '"></circle>';
+}
+var ESITO_STYLE = {
+  'Punto': { color: '--green', dash: '' },
+  'Errore': { color: '--loro', dash: '' },
+  'Murato': { color: '--murato', dash: '' },
+  'Continua': { color: '--gold', dash: '4,3' }
+};
+function svgEsitoLineMarkup(p1, p2, opacity, esito) {
+  var st = ESITO_STYLE[esito] || ESITO_STYLE['Continua'];
+  var dashAttr = st.dash ? ' stroke-dasharray="' + st.dash + '"' : '';
+  return '<line x1="' + p1.x + '" y1="' + p1.y + '" x2="' + p2.x + '" y2="' + p2.y + '" ' +
+    'style="stroke:var(' + st.color + ');stroke-width:2.2;opacity:' + opacity + '"' + dashAttr + '></line>' +
+    '<circle cx="' + p2.x + '" cy="' + p2.y + '" r="3.5" style="fill:var(' + st.color + ');opacity:' + opacity + '"></circle>';
 }
 function setZoneVisual(svgRoot, key, selected) {
   var rect = svgRoot.querySelector('rect[data-key="' + key + '"]');
@@ -500,66 +524,93 @@ function askInitialServer() {
 }
 
 /* ==================== FORMAZIONE ==================== */
+var ROLE_SEQUENCE = ['Palleggiatrice', 'Schiacciatrice1', 'Centrale1', 'Opposto', 'Schiacciatrice2', 'Centrale2'];
+var ROLE_LABELS = { Palleggiatrice: 'Palleggiatrice', Opposto: 'Opposto', Schiacciatrice1: 'Schiacciatrice 1', Schiacciatrice2: 'Schiacciatrice 2', Centrale1: 'Centrale 1', Centrale2: 'Centrale 2' };
+var ROLE_ORDER_FORM = ['Palleggiatrice', 'Opposto', 'Schiacciatrice1', 'Schiacciatrice2', 'Centrale1', 'Centrale2'];
+// Posizione picker: rete in alto. Fila alta (a rete) sx->dx: 4,3,2. Fila bassa (fondo) sx->dx: 5,6,1.
+var POS_PICKER = [
+  { p: 4, row: 0, col: 0 }, { p: 3, row: 0, col: 1 }, { p: 2, row: 0, col: 2 },
+  { p: 5, row: 1, col: 0 }, { p: 6, row: 1, col: 1 }, { p: 1, row: 1, col: 2 }
+];
+function roleAtPosition(posSetter, p) {
+  var idx = (((p - posSetter) % 6) + 6) % 6;
+  return ROLE_SEQUENCE[idx];
+}
+function computeFormationFromRoles(roles, posSetter) {
+  var f = {};
+  for (var p = 1; p <= 6; p++) { f[p] = roles[roleAtPosition(posSetter, p)] || ''; }
+  f.setter = roles.Palleggiatrice || '';
+  f.roles = roles;
+  f.posSetter = posSetter;
+  return f;
+}
 function maybeAskFormation() {
   var prevSet = state.set - 1;
   var hasPrev = !!state.formations[prevSet];
   openModal(
     '<h2>Formazione avversaria — Set ' + state.set + '</h2>' +
-    '<p class="step-note">Inserisci il numero di maglia per ogni posizione (rotazione 1 del set). Segna poi chi è la palleggiatrice.</p>' +
+    '<p class="step-note">Inserisci il numero di maglia per ruolo (sistema classico), poi indica in che posizione parte la palleggiatrice. L\'app calcola da sola le altre rotazioni.</p>' +
     (hasPrev ? '<button class="btn btn-block" id="fm-usaprec">Usa la formazione del Set ' + prevSet + '</button>' : '') +
-    '<div class="formation-grid" id="fm-grid"></div>' +
-    '<label>Palleggiatrice</label>' +
-    '<div class="setter-row" id="fm-setter"></div>' +
+    '<div class="formation-grid" id="fm-roles"></div>' +
+    '<label>Posizione di partenza della palleggiatrice (rotazione 1)</label>' +
+    '<div class="court" id="fm-posgrid" style="max-width:280px;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(2,1fr)"></div>' +
     '<div class="modal-actions">' +
       '<button class="btn" id="fm-skip" style="flex:1">Salta per ora</button>' +
       '<button class="btn btn-primary" id="fm-save" style="flex:1">Salva formazione</button>' +
     '</div>'
   );
-  var order = [ {p:1,label:'Posto 1'}, {p:6,label:'Posto 6'}, {p:5,label:'Posto 5'}, {p:2,label:'Posto 2'}, {p:3,label:'Posto 3'}, {p:4,label:'Posto 4'} ];
-  var grid = document.getElementById('fm-grid');
-  order.forEach(function (o) {
+  var rolesBox = document.getElementById('fm-roles');
+  ROLE_ORDER_FORM.forEach(function (role) {
     var cell = document.createElement('div'); cell.className = 'formation-cell';
-    cell.innerHTML = '<div class="poslabel">' + o.label + '</div><input type="text" inputmode="numeric" maxlength="3" data-pos="' + o.p + '">';
-    grid.appendChild(cell);
+    cell.innerHTML = '<div class="poslabel">' + ROLE_LABELS[role] + '</div><input type="text" inputmode="numeric" maxlength="3" data-role="' + role + '">';
+    rolesBox.appendChild(cell);
   });
-  function refreshSetterChips() {
-    var box = document.getElementById('fm-setter'); box.innerHTML = '';
-    var nums = [];
-    grid.querySelectorAll('input').forEach(function (inp) { if (inp.value.trim()) nums.push(inp.value.trim()); });
-    nums.forEach(function (n) {
-      var c = document.createElement('button'); c.className = 'chip'; c.textContent = '#' + n; c.setAttribute('data-num', n);
-      c.onclick = function () { box.querySelectorAll('.chip').forEach(function (x) { x.classList.remove('active'); }); c.classList.add('active'); };
-      box.appendChild(c);
-    });
-  }
-  grid.querySelectorAll('input').forEach(function (inp) { inp.addEventListener('input', refreshSetterChips); });
-  if (hasPrev) {
-    document.getElementById('fm-usaprec').onclick = function () {
-      var f = state.formations[prevSet];
-      grid.querySelectorAll('input').forEach(function (inp) { inp.value = f[inp.getAttribute('data-pos')] || ''; });
-      refreshSetterChips();
-      setTimeout(function () {
-        var chip = document.querySelector('#fm-setter .chip[data-num="' + f.setter + '"]');
-        if (chip) chip.classList.add('active');
-      }, 0);
+  var posGrid = document.getElementById('fm-posgrid');
+  posGrid.style.display = 'grid'; posGrid.style.gap = '8px'; posGrid.style.aspectRatio = '3/2';
+  posGrid.style.background = 'transparent'; posGrid.style.border = 'none'; posGrid.style.padding = '0'; posGrid.style.margin = '0 auto';
+  var selectedPos = null;
+  POS_PICKER.forEach(function (pp) {
+    var b = document.createElement('button');
+    b.className = 'zone-btn'; b.textContent = 'Posto ' + pp.p;
+    b.style.gridRow = (pp.row + 1); b.style.gridColumn = (pp.col + 1);
+    b.style.fontSize = '13px'; b.style.background = 'var(--bg-card)'; b.style.border = '1px solid var(--border)';
+    b.style.borderRadius = '8px'; b.style.color = 'var(--text)'; b.style.padding = '14px 2px';
+    b.onclick = function () {
+      selectedPos = pp.p;
+      posGrid.querySelectorAll('button').forEach(function (x) { x.style.background = 'var(--bg-card)'; x.style.color = 'var(--text)'; });
+      b.style.background = 'var(--gold)'; b.style.color = '#1a1305';
     };
+    posGrid.appendChild(b);
+  });
+  function prefill(f) {
+    if (!f || !f.roles) return;
+    rolesBox.querySelectorAll('input').forEach(function (inp) { inp.value = f.roles[inp.getAttribute('data-role')] || ''; });
+    selectedPos = f.posSetter || null;
+    if (selectedPos) {
+      var match = POS_PICKER.filter(function (pp) { return pp.p === selectedPos; })[0];
+      posGrid.querySelectorAll('button').forEach(function (x) { x.style.background = 'var(--bg-card)'; x.style.color = 'var(--text)'; });
+      var idx = POS_PICKER.indexOf(match);
+      posGrid.children[idx].style.background = 'var(--gold)'; posGrid.children[idx].style.color = '#1a1305';
+    }
   }
+  if (hasPrev) { document.getElementById('fm-usaprec').onclick = function () { prefill(state.formations[prevSet]); }; }
   document.getElementById('fm-skip').onclick = closeModal;
   document.getElementById('fm-save').onclick = function () {
-    var f = {};
-    var ok = true;
-    grid.querySelectorAll('input').forEach(function (inp) {
+    var roles = {}; var ok = true;
+    rolesBox.querySelectorAll('input').forEach(function (inp) {
       var v = inp.value.trim();
       if (!v) ok = false;
-      f[inp.getAttribute('data-pos')] = v;
+      roles[inp.getAttribute('data-role')] = v;
     });
     if (!ok) { toast('Inserisci tutti e 6 i numeri di maglia'); return; }
-    var setterChip = document.querySelector('#fm-setter .chip.active');
-    f.setter = setterChip ? setterChip.getAttribute('data-num') : '';
+    if (!selectedPos) { toast('Indica la posizione di partenza della palleggiatrice'); return; }
+    var f = computeFormationFromRoles(roles, selectedPos);
     state.formations[state.set] = f;
     jsonp({
       action: 'setFormazione', match: state.match, set: state.set,
-      p1: f[1], p2: f[2], p3: f[3], p4: f[4], p5: f[5], p6: f[6], setter: f.setter
+      p1: f[1], p2: f[2], p3: f[3], p4: f[4], p5: f[5], p6: f[6], setter: f.setter,
+      opposto: roles.Opposto, schiacciatrice1: roles.Schiacciatrice1, schiacciatrice2: roles.Schiacciatrice2,
+      centrale1: roles.Centrale1, centrale2: roles.Centrale2, posSetter: selectedPos
     }).then(function () { toast('Formazione salvata'); closeModal(); onContextChange(); });
   };
 }
@@ -598,6 +649,8 @@ function renderScore() {
   document.getElementById('score-loro').textContent = sl;
   document.getElementById('score-noi-box').classList.toggle('serving', state.server === 'Noi');
   document.getElementById('score-loro-box').classList.toggle('serving', state.server === 'Loro');
+  document.getElementById('btn-battuta-noi').classList.toggle('active-serve', state.server === 'Noi');
+  document.getElementById('btn-battuta-loro').classList.toggle('active-serve', state.server === 'Loro');
   renderLogFeed();
   updateServeCourtAvailability();
 }
@@ -605,26 +658,17 @@ function renderLogFeed() {
   var feed = document.getElementById('log-feed');
   var setPunti = state.data.punti.filter(function (p) { return String(p.Set) == String(state.set); }).slice(-6).reverse();
   feed.innerHTML = setPunti.map(function (p) {
-    return '<div class="log-item"><span>' + p.Server + ' serve — ' + p.Quality + '</span><b>Punto ' + p.Winner + '</b></div>';
+    return '<div class="log-item"><span>Battuta ' + p.Server + '</span><b>Punto ' + p.Winner + '</b></div>';
   }).join('');
 }
-document.getElementById('btn-ace').onclick = function () { finalizePunto('Ace', state.server); };
-document.getElementById('btn-errore').onclick = function () { finalizePunto('Errore', state.server === 'Noi' ? 'Loro' : 'Noi'); };
-document.getElementById('btn-gioco').onclick = function () {
-  openModal(
-    '<h2>Punto su azione</h2><p class="step-note">Chi ha vinto lo scambio?</p>' +
-    '<div class="modal-actions">' +
-      '<button class="btn btn-noi" style="flex:1" id="gioco-noi">Punto Noi</button>' +
-      '<button class="btn btn-loro" style="flex:1" id="gioco-loro">Punto Loro</button>' +
-    '</div>'
-  );
-  document.getElementById('gioco-noi').onclick = function () { closeModal(); finalizePunto('InGioco', 'Noi'); };
-  document.getElementById('gioco-loro').onclick = function () { closeModal(); finalizePunto('InGioco', 'Loro'); };
-};
-function finalizePunto(quality, winner) {
+document.getElementById('btn-battuta-noi').onclick = function () { state.server = 'Noi'; renderScore(); };
+document.getElementById('btn-battuta-loro').onclick = function () { state.server = 'Loro'; renderScore(); };
+document.getElementById('btn-punto-noi').onclick = function () { finalizePunto('Noi'); };
+document.getElementById('btn-punto-loro').onclick = function () { finalizePunto('Loro'); };
+function finalizePunto(winner) {
   var server = state.server;
-  jsonp({ action: 'addPunto', match: state.match, set: state.set, server: server, quality: quality, winner: winner }).then(function (res) {
-    state.data.punti.push({ ID: res.id, Match: state.match, Set: state.set, Server: server, Quality: quality, Winner: winner });
+  jsonp({ action: 'addPunto', match: state.match, set: state.set, server: server, winner: winner }).then(function (res) {
+    state.data.punti.push({ ID: res.id, Match: state.match, Set: state.set, Server: server, Winner: winner });
     state.server = winner;
     renderScore();
   }).catch(function () { toast('Errore di rete: punto non salvato'); });
@@ -679,12 +723,18 @@ function onContextChange() {
   redrawLiveLines();
 }
 function updateAttackLabels() {
+  var f = state.formations[state.set];
   ['svg-attack-cp-holder', 'svg-attack-bp-holder'].forEach(function (holderId) {
     var svg = document.querySelector('#' + holderId + ' svg'); if (!svg) return;
     ATTACK_POS.forEach(function (p) {
       var num = getOccupant(state.set, parseInt(p.key.replace('P', '')), state.rot);
       var text = svg.querySelector('text[data-key="' + p.key + '"]');
-      if (text) text.textContent = p.disabled ? '' : (num || '?');
+      var g = svg.querySelector('.zone-g[data-key="' + p.key + '"]');
+      var rect = svg.querySelector('rect[data-key="' + p.key + '"]');
+      var isSetterHere = !p.disabled && f && f.setter && num && String(num) === String(f.setter);
+      if (g) g.setAttribute('data-disabled', (p.disabled || isSetterHere) ? '1' : '0');
+      if (rect) rect.style.opacity = (p.disabled || isSetterHere) ? '0.35' : '1';
+      if (text) text.textContent = p.disabled ? '' : (isSetterHere ? (num + ' (P)') : (num || '?'));
     });
   });
 }
@@ -705,13 +755,13 @@ function redrawLiveLines() {
   if (cpGroup) {
     cpGroup.innerHTML = '';
     currentAttacchi.filter(function (a) { return a.Fase === 'CambioPalla'; }).forEach(function (a) {
-      cpGroup.innerHTML += svgLineMarkup(attackPosCenter('P' + a.ZonaAttacco), destZoneCenter('Z' + a.ZonaDestinazione), 0.55, '--gold');
+      cpGroup.innerHTML += svgEsitoLineMarkup(attackPosCenter('P' + a.ZonaAttacco), destZoneCenter('Z' + a.ZonaDestinazione), 0.7, a.Esito);
     });
   }
   if (bpGroup) {
     bpGroup.innerHTML = '';
     currentAttacchi.filter(function (a) { return a.Fase === 'BreakPoint'; }).forEach(function (a) {
-      bpGroup.innerHTML += svgLineMarkup(attackPosCenter('P' + a.ZonaAttacco), destZoneCenter('Z' + a.ZonaDestinazione), 0.55, '--gold');
+      bpGroup.innerHTML += svgEsitoLineMarkup(attackPosCenter('P' + a.ZonaAttacco), destZoneCenter('Z' + a.ZonaDestinazione), 0.7, a.Esito);
     });
   }
   if (serveGroup) {
@@ -828,7 +878,11 @@ function fetchAllData() {
     state.data.battute = res.battute || [];
     state.data.attacchi = res.attacchi || [];
     (res.formazioni || []).forEach(function (row) {
-      state.formations[row.Set] = { 1: row.P1, 2: row.P2, 3: row.P3, 4: row.P4, 5: row.P5, 6: row.P6, setter: row.Palleggiatrice };
+      state.formations[row.Set] = {
+        1: row.P1, 2: row.P2, 3: row.P3, 4: row.P4, 5: row.P5, 6: row.P6, setter: row.Palleggiatrice,
+        posSetter: row.PosSetter,
+        roles: { Palleggiatrice: row.Palleggiatrice, Opposto: row.Opposto, Schiacciatrice1: row.Schiacciatrice1, Schiacciatrice2: row.Schiacciatrice2, Centrale1: row.Centrale1, Centrale2: row.Centrale2 }
+      };
     });
     renderScore();
     onContextChange();
@@ -894,14 +948,13 @@ function renderSideOutTable(setFilter) {
     var rows = state.data.punti.filter(function (p) { return String(p.Set) == String(s); });
     if (rows.length === 0) return;
     var loroRows = rows.filter(function (p) { return p.Server === 'Loro'; });
-    var loroNonErr = loroRows.filter(function (p) { return p.Quality !== 'Errore'; });
-    var sideOutNum = loroNonErr.filter(function (p) { return p.Winner === 'Noi'; }).length;
+    var sideOutNum = loroRows.filter(function (p) { return p.Winner === 'Noi'; }).length;
     var noiRows = rows.filter(function (p) { return p.Server === 'Noi'; });
     var breakNum = noiRows.filter(function (p) { return p.Winner === 'Noi'; }).length;
-    var soPct = loroNonErr.length ? (sideOutNum / loroNonErr.length * 100).toFixed(0) : '–';
+    var soPct = loroRows.length ? (sideOutNum / loroRows.length * 100).toFixed(0) : '–';
     var bpPct = noiRows.length ? (breakNum / noiRows.length * 100).toFixed(0) : '–';
-    totalLoroNonErr += loroNonErr.length; totalSideOutNum += sideOutNum; totalNoiServe += noiRows.length; totalBreakNum += breakNum;
-    rowsHtml += '<tr><td>Set ' + s + '</td><td>' + soPct + '%</td><td>' + sideOutNum + '/' + loroNonErr.length + '</td><td>' + bpPct + '%</td><td>' + breakNum + '/' + noiRows.length + '</td></tr>';
+    totalLoroNonErr += loroRows.length; totalSideOutNum += sideOutNum; totalNoiServe += noiRows.length; totalBreakNum += breakNum;
+    rowsHtml += '<tr><td>Set ' + s + '</td><td>' + soPct + '%</td><td>' + sideOutNum + '/' + loroRows.length + '</td><td>' + bpPct + '%</td><td>' + breakNum + '/' + noiRows.length + '</td></tr>';
   });
   if (!rowsHtml) { document.getElementById('sideout-table').innerHTML = '<div class="empty-note">Nessun punto registrato.</div>'; return; }
   var totSoPct = totalLoroNonErr ? (totalSideOutNum / totalLoroNonErr * 100).toFixed(0) : '–';
@@ -960,7 +1013,7 @@ function renderAttackCourtStats(setFilter, rotFilter, playerFilter, faseFilter) 
   });
   var counts = {};
   rows.forEach(function (a) {
-    var k = a.ZonaAttacco + '|' + a.ZonaDestinazione;
+    var k = a.ZonaAttacco + '|' + a.ZonaDestinazione + '|' + (a.Esito || 'Continua');
     counts[k] = (counts[k] || 0) + 1;
   });
   var max = Math.max(1, Object.keys(counts).map(function (k) { return counts[k]; }).reduce(function (a, b) { return Math.max(a, b); }, 1));
@@ -968,9 +1021,10 @@ function renderAttackCourtStats(setFilter, rotFilter, playerFilter, faseFilter) 
   Object.keys(counts).forEach(function (k) {
     var parts = k.split('|');
     var op = 0.25 + 0.65 * (counts[k] / max);
-    group.innerHTML += svgLineMarkup(attackPosCenter('P' + parts[0]), destZoneCenter('Z' + parts[1]), op, '--gold');
+    group.innerHTML += svgEsitoLineMarkup(attackPosCenter('P' + parts[0]), destZoneCenter('Z' + parts[1]), op, parts[2]);
   });
   if (!rows.length) holder.innerHTML += '<div class="empty-note">Nessun dato per questi filtri.</div>';
+  else holder.innerHTML += '<div class="line-legend" style="justify-content:center"><span><i style="background:var(--green)"></i>Punto</span><span><i style="background:var(--loro)"></i>Errore</span><span><i style="background:var(--murato)"></i>Murato</span><span><i style="background:var(--gold);border-top:2px dashed var(--gold);height:0"></i>Continua</span></div>';
 }
 function renderServeCourtStats(setFilter, rotFilter, playerFilter) {
   var rows = filterRows(state.data.battute, setFilter, rotFilter, playerFilter);
@@ -1000,12 +1054,18 @@ document.getElementById('btn-menu').onclick = function () {
       '<button class="btn btn-block" id="menu-formazione">Modifica formazione (Set ' + state.set + ')</button>' +
       '<button class="btn btn-block" id="menu-newmatch">Cambia partita</button>' +
       '<button class="btn btn-block" id="menu-refresh">Aggiorna dati dal foglio</button>' +
+      '<button class="btn btn-block" id="menu-reseturl">Cambia indirizzo script (reset completo)</button>' +
       '<button class="btn btn-block" id="menu-close">Chiudi</button>' +
     '</div>'
   );
   document.getElementById('menu-formazione').onclick = function () { closeModal(); maybeAskFormation(); };
   document.getElementById('menu-newmatch').onclick = function () { localStorage.removeItem('sv_match'); location.reload(); };
   document.getElementById('menu-refresh').onclick = function () { fetchAllData().then(closeModal); };
+  document.getElementById('menu-reseturl').onclick = function () {
+    localStorage.removeItem('sv_match');
+    localStorage.removeItem('sv_scripturl');
+    location.reload();
+  };
   document.getElementById('menu-close').onclick = closeModal;
 };
 
