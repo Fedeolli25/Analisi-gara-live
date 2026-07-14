@@ -94,6 +94,7 @@ input[type=text],input[type=number]{width:100%; background:var(--bg-card); borde
 .line-legend{display:flex; gap:10px; flex-wrap:wrap; margin-top:8px; font-size:11px; color:var(--text-muted);}
 .line-legend span{display:inline-flex; align-items:center; gap:4px;}
 .line-legend i{display:inline-block; width:14px; height:2px;}
+.override-btn{background:var(--bg-card); border:1px solid var(--border); border-radius:6px; padding:4px 8px; font-size:11px; color:var(--text-muted);}
 
 .courts-row{display:flex; gap:14px; margin-top:16px; flex-wrap:wrap; justify-content:center; max-width:900px; margin-left:auto; margin-right:auto;}
 .court-panel{flex:1; min-width:270px; max-width:400px; background:var(--bg-elevated); border:1px solid var(--border); border-radius:16px; padding:12px;}
@@ -252,12 +253,14 @@ th{color:var(--text-muted); font-weight:600; text-transform:uppercase; font-size
           <button class="chip" data-r="!6">!6</button>
         </div>
         <div id="svg-attack-cp-holder"></div>
+        <div class="line-legend" id="override-row-cp" style="margin-top:10px"></div>
         <div class="line-legend"><span><i style="background:var(--green)"></i>Punto</span><span><i style="background:var(--loro)"></i>Errore</span><span><i style="background:var(--murato)"></i>Murato</span><span><i style="background:var(--gold);border-top:2px dashed var(--gold);height:0"></i>Continua</span></div>
       </div>
       <div class="court-panel" id="panel-attack-bp">
         <h4>Attacco avversario — Break point / Transizione</h4>
         <div class="subinfo">Contrattacchi e palle di ritorno (in battuta o dopo il primo attacco)</div>
         <div id="svg-attack-bp-holder"></div>
+        <div class="line-legend" id="override-row-bp" style="margin-top:10px"></div>
         <div class="line-legend"><span><i style="background:var(--green)"></i>Punto</span><span><i style="background:var(--loro)"></i>Errore</span><span><i style="background:var(--murato)"></i>Murato</span><span><i style="background:var(--gold);border-top:2px dashed var(--gold);height:0"></i>Continua</span></div>
       </div>
       <div class="court-panel" id="panel-serve-court">
@@ -322,12 +325,12 @@ var VB_W = 300, VB_H = 424, COL_W = 100;
 var NET_Y0 = 200, NET_Y1 = 224;
 var ATTACK_ROWS = [ { y: 0, h: 95 }, { y: 105, h: 95 } ]; // 0=fondo, 1=rete
 var ATTACK_POS = [
-  { key: 'P1', row: 0, col: 0 },
+  { key: 'P5', row: 0, col: 0, disabled: true },
   { key: 'P6', row: 0, col: 1 },
-  { key: 'P5', row: 0, col: 2, disabled: true },
-  { key: 'P2', row: 1, col: 0 },
+  { key: 'P1', row: 0, col: 2 },
+  { key: 'P4', row: 1, col: 0 },
   { key: 'P3', row: 1, col: 1 },
-  { key: 'P4', row: 1, col: 2 }
+  { key: 'P2', row: 1, col: 2 }
 ];
 var SERVE_BANDS = [ { key: 'Sx', col: 0, label: 'Sx' }, { key: 'Ce', col: 1, label: 'Ce' }, { key: 'Dx', col: 2, label: 'Dx' } ];
 var DEST_ROWS = [
@@ -617,15 +620,49 @@ function maybeAskFormation() {
 function getOccupant(setNum, position, rotation) {
   var f = state.formations[setNum];
   if (!f) return null;
+  if (f.overrides) {
+    var ovKey = rotation + '-' + position;
+    if (f.overrides[ovKey]) return f.overrides[ovKey];
+  }
   var basePos = ((position - 1 + (rotation - 1)) % 6) + 1;
   return f[basePos] || null;
+}
+function setOverride(position, jersey) {
+  var f = state.formations[state.set];
+  if (!f) return;
+  if (!f.overrides) f.overrides = {};
+  var ovKey = state.rot + '-' + position;
+  f.overrides[ovKey] = jersey;
+  jsonp({ action: 'setOverride', match: state.match, set: state.set, rotazione: state.rot, posizione: position, giocatrice: jersey })
+    .then(function () { toast('Posto ' + position + ' corretto a #' + jersey); onContextChange(); });
+}
+function openOverridePicker(position) {
+  var f = state.formations[state.set];
+  if (!f || !f.roles) { toast('Imposta prima la formazione'); return; }
+  var current = getOccupant(state.set, position, state.rot);
+  var chips = Object.keys(ROLE_LABELS).map(function (role) {
+    var jersey = f.roles[role];
+    if (!jersey) return '';
+    var active = String(jersey) === String(current) ? ' active' : '';
+    return '<button class="chip' + active + '" data-jersey="' + jersey + '" style="background:var(--bg-card);border:1px solid var(--border);padding:12px 8px;flex:1 1 40%">#' + jersey + '<br><span style="font-size:10px;color:var(--text-muted)">' + ROLE_LABELS[role] + '</span></button>';
+  }).join('');
+  openModal(
+    '<h2>Chi si trova al posto ' + position + '?</h2>' +
+    '<p class="step-note">Rotazione R' + state.rot + ' — correggi solo per questa rotazione.</p>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:8px">' + chips + '</div>' +
+    '<div class="modal-actions"><button class="btn" id="ov-close" style="flex:1">Chiudi</button></div>'
+  );
+  document.querySelectorAll('#modal-root [data-jersey]').forEach(function (btn) {
+    btn.onclick = function () { setOverride(position, btn.getAttribute('data-jersey')); closeModal(); };
+  });
+  document.getElementById('ov-close').onclick = closeModal;
 }
 function updateSetterInfo() {
   var f = state.formations[state.set];
   var el = document.getElementById('topbar-setterinfo');
   if (!f || !f.setter) { el.textContent = ''; return; }
   var pos = null;
-  for (var p = 1; p <= 6; p++) { if (getOccupant(state.set, p, state.rot) === f.setter) pos = p; }
+  for (var p = 1; p <= 6; p++) { if (String(getOccupant(state.set, p, state.rot)) === String(f.setter)) pos = p; }
   el.textContent = 'Palleggiatrice #' + f.setter + (pos ? ' — posto ' + pos : '');
 }
 
@@ -720,7 +757,21 @@ function onContextChange() {
   updateAttackLabels();
   updateServeLabel();
   updateServeCourtAvailability();
+  renderOverrideButtons();
   redrawLiveLines();
+}
+function renderOverrideButtons() {
+  var editablePositions = [1, 2, 3, 4, 6];
+  ['override-row-cp', 'override-row-bp'].forEach(function (rowId) {
+    var row = document.getElementById(rowId); if (!row) return;
+    row.innerHTML = editablePositions.map(function (pos) {
+      var num = getOccupant(state.set, pos, state.rot);
+      return '<button class="override-btn" data-pos="' + pos + '">✏️ P' + pos + ': #' + (num || '?') + '</button>';
+    }).join('');
+    row.querySelectorAll('.override-btn').forEach(function (btn) {
+      btn.onclick = function () { openOverridePicker(parseInt(btn.getAttribute('data-pos'))); };
+    });
+  });
 }
 function updateAttackLabels() {
   var f = state.formations[state.set];
@@ -881,8 +932,15 @@ function fetchAllData() {
       state.formations[row.Set] = {
         1: row.P1, 2: row.P2, 3: row.P3, 4: row.P4, 5: row.P5, 6: row.P6, setter: row.Palleggiatrice,
         posSetter: row.PosSetter,
-        roles: { Palleggiatrice: row.Palleggiatrice, Opposto: row.Opposto, Schiacciatrice1: row.Schiacciatrice1, Schiacciatrice2: row.Schiacciatrice2, Centrale1: row.Centrale1, Centrale2: row.Centrale2 }
+        roles: { Palleggiatrice: row.Palleggiatrice, Opposto: row.Opposto, Schiacciatrice1: row.Schiacciatrice1, Schiacciatrice2: row.Schiacciatrice2, Centrale1: row.Centrale1, Centrale2: row.Centrale2 },
+        overrides: {}
       };
+    });
+    (res.overrides || []).forEach(function (row) {
+      var f = state.formations[row.Set];
+      if (!f) return;
+      if (!f.overrides) f.overrides = {};
+      f.overrides[row.Rotazione + '-' + row.Posizione] = row.Giocatrice;
     });
     renderScore();
     onContextChange();
